@@ -1,15 +1,36 @@
 {
-  "name": "expressjs",
+  "name": "nutriscan-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "API backend pour l'application NutriScan - Scanner nutritionnel intelligent",
+  "main": "app.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "nutrition",
+    "api",
+    "express",
+    "supabase",
+    "scanner",
+    "food"
+  ],
+  "author": "NutriScan Team",
   "license": "ISC",
-  "description": "",
   "dependencies": {
-    "express": "^5.1.0"
+    "@supabase/supabase-js": "^2.54.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "helmet": "^7.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   }
 }

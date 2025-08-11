@@ -1,129 +1,91 @@
-# Nutriscan API
+# NutriScan API
 
-> API backend pour l'application Nutriscan - Analyse nutritionnelle intelligente
+API backend pour l'application NutriScan - Scanner nutritionnel intelligent.
 
-## 📋 Description
+## 🚀 Installation
 
-Nutriscan API est le backend de l'application mobile Nutriscan qui permet d'analyser la composition nutritionnelle des aliments via scan de codes-barres et reconnaissance d'images.
+### Prérequis
+- Node.js (version 16 ou supérieure)
+- npm ou yarn
+- Compte Supabase
 
-## 🚀 Technologies
+### Configuration
 
-- **Runtime** : Node.js
-- **Framework** : Express.js 5.1.0
-- **Port par défaut** : 3000
-
-## 📦 Installation
-
+1. **Cloner le projet et installer les dépendances :**
 ```bash
-# Cloner le repository
-git clone <url-du-repo>
-cd nutriscan-api
-
-# Installer les dépendances
 npm install
-
-# Démarrer le serveur de développement
-node app.js
 ```
 
-## 🔧 Configuration
+2. **Configuration des variables d'environnement :**
+   - Copier le fichier `.env.example` vers `.env`
+   - Remplir les variables avec vos informations Supabase
 
-### Variables d'environnement
+```bash
+cp .env.example .env
+```
+
+3. **Obtenir les clés Supabase :**
+   - Connectez-vous à votre [dashboard Supabase](https://app.supabase.com)
+   - Sélectionnez votre projet
+   - Allez dans `Settings` > `API`
+   - Copiez :
+     - `Project URL` → `SUPABASE_URL`
+     - `anon public` → `SUPABASE_ANON_KEY`
+     - `service_role` → `SUPABASE_SERVICE_ROLE_KEY`
+
+### Variables d'environnement requises
 
 ```env
-# À créer : .env
-PORT=3000
+# Configuration Supabase
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+# Configuration de l'application
 NODE_ENV=development
-# Autres variables à ajouter selon les besoins
+PORT=3000
 ```
 
-## 📚 API Endpoints
-
-### Status
-- `GET /` - Point d'entrée de l'API
-
-*Documentation complète des endpoints à venir...*
-
-## 🏗️ Architecture prévue
-
-```
-nутriscan-api/
-├── app.js              # Point d'entrée
-├── routes/             # Routes API
-├── controllers/        # Logique métier
-├── models/            # Modèles de données
-├── middleware/        # Middlewares personnalisés
-├── config/            # Configuration
-├── utils/             # Utilitaires
-├── tests/             # Tests unitaires
-└── docs/              # Documentation
-```
-
-## 🔮 Fonctionnalités prévues
-
-- [ ] Authentification utilisateur (JWT)
-- [ ] Scan de codes-barres
-- [ ] Reconnaissance d'images d'aliments
-- [ ] Base de données nutritionnelle
-- [ ] Calcul de scores nutritionnels
-- [ ] Historique des scans
-- [ ] Profils utilisateur
-- [ ] API de recommandations
-
-## 🛠️ Développement
-
-### Scripts disponibles
+## 🏃‍♂️ Démarrage
 
 ```bash
-# Démarrer le serveur
-node app.js
+# Mode développement
+npm start
 
-# Tests (à configurer)
-npm test
+# Ou avec nodemon pour le rechargement automatique
+npm run dev
 ```
 
-### Standards de code
+## 🔍 Routes disponibles
 
-- Utilisation d'ESLint (à configurer)
-- Convention de nommage camelCase
-- Documentation JSDoc pour les fonctions complexes
+- `GET /` - Page d'accueil de l'API
+- `GET /health/supabase` - Test de connexion Supabase
+
+## 🛠️ Structure du projet
+
+```
+nutriscan-api/
+├── config/
+│   └── supabase.js      # Configuration Supabase
+├── .env                 # Variables d'environnement (non versionné)
+├── .env.example         # Template des variables d'environnement
+├── .gitignore          # Fichiers à ignorer par Git
+├── app.js              # Point d'entrée de l'application
+├── package.json        # Dépendances et scripts
+└── README.md           # Documentation
+```
 
 ## 🔒 Sécurité
 
-- [ ] Validation des entrées
-- [ ] Rate limiting
-- [ ] CORS configuré
-- [ ] Helmet.js pour les headers de sécurité
-- [ ] Authentification JWT
-- [ ] Chiffrement des données sensibles
+- Variables d'environnement protégées par `.gitignore`
+- Middlewares de sécurité (helmet, cors)
+- Validation des entrées
+- Gestion d'erreurs centralisée
 
-## 📊 Base de données
+## 📦 Dépendances principales
 
-*À définir - MongoDB ou PostgreSQL selon les besoins*
-
-## 🚀 Déploiement
-
-*Instructions de déploiement à venir...*
-
-## 🤝 Contribution
-
-1. Fork le projet
-2. Créer une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. Commit les changements (`git commit -m 'Ajout nouvelle fonctionnalité'`)
-4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
-5. Ouvrir une Pull Request
-
-## 📝 Changelog
-
-### [0.1.0] - 2025-01-XX
-- Initialisation du projet Express.js
-- Configuration de base
-- Structure de projet définie
-
-## 📄 Licence
-
-ISC
-
----
-
-**Note** : Ce README sera mis à jour au fur et à mesure du développement de l'API Nutriscan.
+- **express** - Framework web
+- **@supabase/supabase-js** - Client Supabase
+- **dotenv** - Gestion des variables d'environnement
+- **cors** - Gestion CORS
+- **helmet** - Sécurité HTTP
