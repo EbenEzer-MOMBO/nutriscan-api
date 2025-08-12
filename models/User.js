@@ -371,6 +371,105 @@ class User {
   }
 
   /**
+   * Définir un token de réinitialisation de mot de passe
+   * @param {string} resetToken - Token de réinitialisation
+   * @param {Date} expiresAt - Date d'expiration du token
+   * @returns {Promise<boolean>} True si la mise à jour a réussi
+   */
+  async setPasswordResetToken(resetToken, expiresAt) {
+    try {
+      // Utiliser le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase
+      const { error } = await client
+        .from('users')
+        .update({
+          password_reset_token: resetToken,
+          password_reset_expires: expiresAt.toISOString()
+        })
+        .eq('id', this.id)
+
+      if (error) {
+        console.error('Erreur lors de la définition du token de réinitialisation:', error)
+        return false
+      }
+
+      this.password_reset_token = resetToken
+      this.password_reset_expires = expiresAt.toISOString()
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la définition du token de réinitialisation:', error)
+      return false
+    }
+  }
+
+  /**
+   * Trouver un utilisateur par son token de réinitialisation
+   * @param {string} resetToken - Token de réinitialisation
+   * @returns {Promise<User|null>} Utilisateur trouvé ou null
+   */
+  static async findByPasswordResetToken(resetToken) {
+    try {
+      // Utiliser le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase
+      const { data, error } = await client
+        .from('users')
+        .select('*')
+        .eq('password_reset_token', resetToken)
+        .gt('password_reset_expires', new Date().toISOString())
+        .single()
+
+      if (error || !data) {
+        return null
+      }
+
+      return new User(data)
+    } catch (error) {
+      console.error('Erreur lors de la recherche par token de réinitialisation:', error)
+      return null
+    }
+  }
+
+  /**
+   * Réinitialiser le mot de passe avec un nouveau mot de passe
+   * @param {string} newPassword - Nouveau mot de passe
+   * @returns {Promise<boolean>} True si la réinitialisation a réussi
+   */
+  async resetPassword(newPassword) {
+    try {
+      const saltRounds = 12
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds)
+
+      // Utiliser le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase
+      const { error } = await client
+        .from('users')
+        .update({
+          password_hash: hashedPassword,
+          password_reset_token: null,
+          password_reset_expires: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', this.id)
+
+      if (error) {
+        console.error('Erreur lors de la réinitialisation du mot de passe:', error)
+        return false
+      }
+
+      // Mettre à jour l'instance
+      this.password_hash = hashedPassword
+      this.password_reset_token = null
+      this.password_reset_expires = null
+      this.updated_at = new Date().toISOString()
+
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation du mot de passe:', error)
+      return false
+    }
+  }
+
+  /**
    * Lister tous les utilisateurs actifs (admin uniquement)
    * @param {Object} options - Options de pagination
    * @param {number} options.page - Numéro de page
