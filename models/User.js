@@ -5,6 +5,7 @@
 
 const { supabase, supabaseAdmin } = require('../config/supabase')
 const bcrypt = require('bcrypt')
+const { generateVerificationToken, sendWelcomeEmail } = require('../services/emailService')
 
 class User {
   constructor(userData = {}) {
@@ -49,6 +50,10 @@ class User {
       const saltRounds = 12
       const password_hash = await bcrypt.hash(userData.password, saltRounds)
 
+      // Générer un token de vérification
+      const verificationToken = generateVerificationToken()
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 heures
+
       // Préparer les données pour l'insertion
       const userToInsert = {
         name: userData.name.trim(),
@@ -58,11 +63,14 @@ class User {
         age: userData.age || null,
         weight_kg: userData.weight_kg || null,
         height_cm: userData.height_cm || null,
-        is_active: true
+        is_active: false, // Compte inactif jusqu'à vérification
+        verification_token: verificationToken,
+        verification_expires: verificationExpires.toISOString()
       }
 
-      // Insérer l'utilisateur dans la base de données
-      const { data, error } = await supabase
+      // Insérer l'utilisateur dans la base de données avec le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase // Utiliser admin si disponible, sinon client normal
+      const { data, error } = await client
         .from('users')
         .insert([userToInsert])
         .select('id, name, email, profile_image_url, age, weight_kg, height_cm, created_at, updated_at, is_active')
@@ -71,6 +79,15 @@ class User {
       if (error) {
         console.error('Erreur lors de la création de l\'utilisateur:', error)
         throw new Error('Erreur lors de la création de l\'utilisateur')
+      }
+
+      // Envoyer l'email de bienvenue avec le token de vérification
+      try {
+        await sendWelcomeEmail(data.email, data.name, verificationToken)
+        console.log('✅ Email de bienvenue envoyé à:', data.email)
+      } catch (emailError) {
+        console.error('⚠️ Erreur envoi email (utilisateur créé):', emailError.message)
+        // Ne pas faire échouer la création si l'email échoue
       }
 
       return new User(data)
@@ -86,11 +103,12 @@ class User {
    */
   static async findById(id) {
     try {
-      const { data, error } = await supabase
+      // Utiliser le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase
+      const { data, error } = await client
         .from('users')
         .select('id, name, email, profile_image_url, age, weight_kg, height_cm, created_at, updated_at, is_active')
         .eq('id', id)
-        .eq('is_active', true)
         .single()
 
       if (error || !data) {
@@ -105,26 +123,114 @@ class User {
   }
 
   /**
+   * Vérifier un compte utilisateur avec le token de vérification
+   * @param {string} verificationToken - Token de vérification
+   * @returns {Promise<Object>} Résultat de la vérification
+   */
+  static async verifyAccount(verificationToken) {
+    try {
+      const { sendAccountActivatedEmail } = require('../services/emailService')
+      
+      // Chercher l'utilisateur avec ce token
+      const client = supabaseAdmin || supabase
+      const { data: user, error: findError } = await client
+        .from('users')
+        .select('*')
+        .eq('verification_token', verificationToken)
+        .single()
+
+      if (findError || !user) {
+        return { success: false, message: 'Token de vérification invalide' }
+      }
+
+      // Vérifier si le token n'a pas expiré
+      const now = new Date()
+      const expirationDate = new Date(user.verification_expires)
+      
+      if (now > expirationDate) {
+        return { success: false, message: 'Token de vérification expiré' }
+      }
+
+      // Vérifier si le compte n'est pas déjà activé
+      if (user.is_active) {
+        return { success: false, message: 'Compte déjà activé' }
+      }
+
+      // Activer le compte
+      const { data: updatedUser, error: updateError } = await client
+        .from('users')
+        .update({
+          is_active: true,
+          verification_token: null,
+          verification_expires: null,
+          verified_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select('id, name, email, profile_image_url, age, weight_kg, height_cm, created_at, updated_at, is_active')
+        .single()
+
+      if (updateError) {
+        console.error('Erreur lors de l\'activation:', updateError)
+        return { success: false, message: 'Erreur lors de l\'activation du compte' }
+      }
+
+      // Envoyer l'email de confirmation d'activation
+      try {
+        await sendAccountActivatedEmail(updatedUser.email, updatedUser.name)
+        console.log('✅ Email d\'activation envoyé à:', updatedUser.email)
+      } catch (emailError) {
+        console.error('⚠️ Erreur envoi email activation:', emailError.message)
+        // Ne pas faire échouer l'activation si l'email échoue
+      }
+
+      return { 
+        success: true, 
+        message: 'Compte activé avec succès',
+        user: new User(updatedUser)
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de la vérification:', error)
+      return { success: false, message: 'Erreur lors de la vérification du compte' }
+    }
+  }
+
+  /**
    * Trouver un utilisateur par son email
    * @param {string} email - Email de l'utilisateur
    * @returns {Promise<User|null>} Utilisateur trouvé ou null
    */
   static async findByEmail(email) {
     try {
-      const { data, error } = await supabase
+      const cleanEmail = email.toLowerCase().trim()
+      console.log('🔍 Recherche utilisateur avec email:', cleanEmail)
+      
+      // Utiliser le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase
+      const { data, error } = await client
         .from('users')
         .select('*')
-        .eq('email', email.toLowerCase().trim())
-        .eq('is_active', true)
+        .eq('email', cleanEmail)
         .single()
 
-      if (error || !data) {
+      console.log('📊 Résultat requête Supabase:')
+      console.log('  - Data:', data ? 'Utilisateur trouvé' : 'Aucun utilisateur')
+      console.log('  - Error:', error)
+
+      if (error) {
+        console.log('❌ Erreur Supabase:', error.message, error.code)
         return null
       }
 
+      if (!data) {
+        console.log('❌ Aucune donnée retournée')
+        return null
+      }
+
+      console.log('✅ Utilisateur trouvé:', data.email, 'ID:', data.id)
       return new User(data)
     } catch (error) {
-      console.error('Erreur lors de la recherche par email:', error)
+      console.error('💥 Erreur lors de la recherche par email:', error)
       return null
     }
   }
@@ -277,7 +383,9 @@ class User {
       const limit = Math.min(options.limit || 10, 100) // Max 100 par page
       const offset = (page - 1) * limit
 
-      const { data, error, count } = await supabase
+      // Utiliser le client admin pour contourner RLS
+      const client = supabaseAdmin || supabase
+      const { data, error, count } = await client
         .from('users')
         .select('id, name, email, profile_image_url, age, weight_kg, height_cm, created_at, updated_at, is_active', { count: 'exact' })
         .eq('is_active', true)

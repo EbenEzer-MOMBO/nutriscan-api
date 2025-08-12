@@ -33,6 +33,7 @@ const supabase = createClient(
 // Création du client Supabase avec la clé service (pour les opérations administratives)
 let supabaseAdmin = null
 if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.log('✅ Clé service Supabase configurée - Client admin disponible')
   supabaseAdmin = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -43,6 +44,8 @@ if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
       }
     }
   )
+} else {
+  console.log('⚠️ Clé service Supabase non configurée - Utilisation du client anonyme uniquement')
 }
 
 module.exports = {

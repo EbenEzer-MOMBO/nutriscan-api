@@ -13,11 +13,23 @@ const { validateUserCreation, validateUserUpdate, sanitizeUserData } = require('
  */
 async function createUser(req, res) {
   try {
+    console.log('🔍 === DÉBUT CRÉATION UTILISATEUR ===');
+    console.log('📥 req.body:', JSON.stringify(req.body, null, 2));
+    console.log('📥 req.query:', JSON.stringify(req.query, null, 2));
+    console.log('📥 req.params:', JSON.stringify(req.params, null, 2));
+    console.log('📥 Content-Type:', req.get('Content-Type'));
+    
+    // Récupérer les données du corps de la requête ou des paramètres de requête
+    const userData = { ...req.body, ...req.query };
+    console.log('🔄 Données combinées (body + query):', JSON.stringify(userData, null, 2));
+    
     // Nettoyer les données d'entrée
-    const sanitizedData = sanitizeUserData(req.body)
+    const sanitizedData = sanitizeUserData(userData)
+    console.log('🧹 Données nettoyées:', JSON.stringify(sanitizedData, null, 2));
     
     // Valider les données
     const validation = validateUserCreation(sanitizedData)
+    console.log('✅ Résultat validation:', JSON.stringify(validation, null, 2));
     if (!validation.isValid) {
       return res.status(400).json({
         error: 'Données invalides',
